@@ -1,3 +1,4 @@
 # FFanalysis
 .eslintrc.js
 node_modules
+.env

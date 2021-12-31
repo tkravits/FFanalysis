@@ -1,5 +1,8 @@
 const puppeteer = require('puppeteer')
+require('dotenv').config()
 const nflUrl: string = 'https://fantasy.nfl.com/research/pointsagainst'
+const SHEET_ID = '1WPMqLzDcpJTUEz-gFj5kK8P_qQ20iZ3WwV1GsW2u7-k'
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN
 
 async function scrapeTable (url: string) {
   const browser = await puppeteer.launch({
