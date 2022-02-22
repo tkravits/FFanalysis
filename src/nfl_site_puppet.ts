@@ -1,9 +1,16 @@
 require("dotenv").config();
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import puppeteer from "puppeteer";
-const nflWebsite = {
+
+type Website = {
+  url: string
+  position?: string;
+};
+
+let nflWebsite: Website = {
   url: "https://fantasy.nfl.com/research/pointsagainst",
 };
+
 let results: string[][] = [];
 
 // Config variables
@@ -31,14 +38,15 @@ const appendSpreadsheet = async (row) => {
   }
 };
 
-async function scrapeTable(url: string) {
+async function scrapeTable(nflWebsite: Website) {
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: false,
     //slowMo: 10,
     defaultViewport: null,
   });
   const page = await browser.newPage();
-  await page.goto(url, { waitUntil: "networkidle2" });
+  await page.goto(nflWebsite.url, { waitUntil: "networkidle2" });
+
   const result = await page.evaluate(() => {
     const rows = document.querySelectorAll("table tr");
     return Array.from(rows, (row) => {
@@ -53,9 +61,11 @@ async function scrapeTable(url: string) {
   return result;
 }
 
-(async function () {
-  console.log(nflWebsite.url);
-  results = await scrapeTable(nflWebsite.url);
+async function addToGSheets (nflWebsite: Website) {
+  console.log(nflWebsite["url"]);
+  results = await scrapeTable(nflWebsite);
   console.log(results);
   appendSpreadsheet(results);
-})();
+}
+const QBSheets = addToGSheets(nflWebsite);
+console.log(QBSheets);
