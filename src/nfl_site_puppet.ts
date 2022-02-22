@@ -9,6 +9,7 @@ type Website = {
 
 let nflWebsite: Website = {
   url: "https://fantasy.nfl.com/research/pointsagainst",
+  position: "RB"
 };
 
 let results: string[][] = [];
@@ -46,14 +47,19 @@ async function scrapeTable(nflWebsite: Website) {
   });
   const page = await browser.newPage();
   await page.goto(nflWebsite.url, { waitUntil: "networkidle2" });
-
+  const position = await page.evaluate(() => {
+    const RB = document.querySelector("//*[text()=" + nflWebsite.position + "]")
+    return RB
+  });
+  await page.click(nflWebsite.position);
   const result = await page.evaluate(() => {
+    
     const rows = document.querySelectorAll("table tr");
     return Array.from(rows, (row) => {
       const columns = row.querySelectorAll("td");
       return Array.from(
         columns,
-        (column) => (column as HTMLElement).textContent
+        (column) => (column).textContent
       );
     });
   });
