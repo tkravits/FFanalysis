@@ -16,6 +16,58 @@ const PRIVATE_KEY = process.env.REACT_APP_GOOGLE_SERVICE_PRIVATE_KEY;
 
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID);
 
+
+
+async function selectPosition(positions){
+  for (const position of positions) {
+   return positionClick;
+  }
+}
+
+async function openSite(website){
+const browser = await puppeteer.launch({
+  headless: false,
+  //slowMo: 10,
+  defaultViewport: null,
+});
+const page = await browser.newPage();
+await page.goto(website, { waitUntil: "networkidle2" });
+return page;
+}
+
+async function scrapeTable(nflWebsite) {
+  const browser = await puppeteer.launch({
+    headless: false,
+    //slowMo: 10,
+    defaultViewport: null,
+  });
+  const page = await browser.newPage();
+  await page.goto(nflWebsite, { waitUntil: "networkidle2" });
+  //page = await openSite(nflWebsite);
+  //selector = "//*[text()='RB']";
+  // NEED TO CONVERT xPATH TO CSS SELECTOR
+  //const nodes = await page.$$(`//*[text()='RB']`); // selector children
+  const positionClick = await page.evaluate(() => Array.from(document.querySelector("//*[text()='RB']"), e => e.innerText));
+// function to click on position await page.click(position)
+  //positionClick = await selectPosition(fantPositions)
+  await page.click(positionClick);
+  //await page.click(nodes[0]);
+  const result = await page.evaluate(() => {
+    
+    const rows = document.querySelectorAll("table tr");
+    return Array.from(rows, (row) => {
+      const columns = row.querySelectorAll("td");
+      return Array.from(
+        columns,
+        (column) => (column).textContent
+      );
+    });
+  });
+  await browser.close();
+  return result;
+}
+
+
 const appendSpreadsheet = async (row) => {
  
   try {
@@ -33,36 +85,13 @@ const appendSpreadsheet = async (row) => {
   }
 };
 
-async function scrapeTable(nflWebsite) {
-  const browser = await puppeteer.launch({
-    headless: false,
-    //slowMo: 10,
-    defaultViewport: null,
-  });
-  const page = await browser.newPage();
-  await page.goto(nflWebsite, { waitUntil: "networkidle2" });
-  const positions = await page.evaluate(() => Array.from(document.querySelector("//*[text()=" + fantPositions[i] + "]"), e => e.innerText));
-   for (const position of positions) {
-    await page.click(position)
-   }
 
-  const result = await page.evaluate(() => {
-    
-    const rows = document.querySelectorAll("table tr");
-    return Array.from(rows, (row) => {
-      const columns = row.querySelectorAll("td");
-      return Array.from(
-        columns,
-        (column) => (column).textContent
-      );
-    });
-  });
-  await browser.close();
-  return result;
-}
 
 async function addToGSheets (nflWebsite) {
   console.log(nflWebsite);
+  // loop through each position and scrape the table
+  // for (const position of fantPositions) {
+    // scrape the table
   results = await scrapeTable(nflWebsite);
   console.log(results);
   appendSpreadsheet(results);
