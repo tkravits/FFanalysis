@@ -1,11 +1,11 @@
+'use strict';
 //require('dotenv').config();
 // if you're going to run this, add "type": "module" to package.json
 import 'dotenv/config'
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import puppeteer from 'puppeteer';
-const nflWebsite = {
-  url: "https://fantasy.nfl.com/research/pointsagainst",
-};
+const nflWebsite = "https://fantasy.nfl.com/research/pointsagainst"
+const fantPositions = ["QB", "RB", "WR", "TE", "K", "DST"]
 
 // Config variables
 const SPREADSHEET_ID = process.env.REACT_APP_SPREADSHEET_ID;
@@ -33,39 +33,44 @@ const appendSpreadsheet = async (row) => {
   }
 };
 
-async function scrapeTable (url) {
+async function scrapeTable(nflWebsite) {
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: false,
     //slowMo: 10,
-    defaultViewport: null
-  })
-  const page = await browser.newPage()
-  await page.goto(url, { waitUntil: 'networkidle2' })
+    defaultViewport: null,
+  });
+  const page = await browser.newPage();
+  await page.goto(nflWebsite, { waitUntil: "networkidle2" });
+  for (const i in fantPositions) {
+    const positions = await page.evaluate(() => Array.from(document.querySelector("//*[text()=" + fantPositions[i] + "]"), e => e.innerText));
+    positions.forEach(positionClick => {
+    console.log(positionClick);
+    });
+  await page.click(positionClick);
+}
+ 
+
+
   const result = await page.evaluate(() => {
-    const rows = document.querySelectorAll('table tr')
-    return Array.from(rows, row => {
-      const columns = row.querySelectorAll('td')
-      console.log(typeof(columns))
-      return Array.from(columns, column => (column).textContent)
-    })
-  })
-  await browser.close()
-  return result
+    
+    const rows = document.querySelectorAll("table tr");
+    return Array.from(rows, (row) => {
+      const columns = row.querySelectorAll("td");
+      return Array.from(
+        columns,
+        (column) => (column).textContent
+      );
+    });
+  });
+  await browser.close();
+  return result;
 }
 
-
-(async function () {
-  console.log(nflWebsite.url)
-  const results = await scrapeTable(nflWebsite.url)
-  console.log(results)
-  // for (let i of results) {
-  //   console.log(typeof(i))
-  //   console.log(typeof(results))
-  //   //let team = i[0]
-  //   // need to define either the array more specifically or figure out how to define i
-  //   let team = i[0]
-  //   console.log(team)
-  //   console.log(typeof(team))
-    appendSpreadsheet(results)
-//}
-})();
+async function addToGSheets (nflWebsite) {
+  console.log(nflWebsite);
+  results = await scrapeTable(nflWebsite);
+  console.log(results);
+  appendSpreadsheet(results);
+}
+const QBSheets = addToGSheets(nflWebsite);
+console.log(QBSheets);

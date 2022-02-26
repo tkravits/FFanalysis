@@ -2,28 +2,30 @@ require("dotenv").config();
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import puppeteer from "puppeteer";
 
-type Website = {
+
+interface Website {
   url: string
   position?: string;
+  positions?: Array<string>;
 };
 
-let nflWebsite: Website = {
+const nflWebsite: Website = {
   url: "https://fantasy.nfl.com/research/pointsagainst",
-  position: "RB"
+  positions: ["QB", "RB", "WR", "TE", "K", "DST"]
 };
 
 let results: string[][] = [];
 
 // Config variables
-const SPREADSHEET_ID = process.env.REACT_APP_SPREADSHEET_ID;
-const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-const CLIENT_EMAIL = process.env.REACT_APP_GOOGLE_CLIENT_EMAIL;
-process.env.REACT_APP_GOOGLE_SERVICE_PRIVATE_KEY.replace(/\n/g, "\n");
-const PRIVATE_KEY = process.env.REACT_APP_GOOGLE_SERVICE_PRIVATE_KEY;
+const SPREADSHEET_ID: string = process.env.SPREADSHEET_ID as string;
+const SHEET_ID: string = process.env.REACT_APP_SHEET_ID as string;
+const CLIENT_EMAIL: string = process.env.REACT_APP_GOOGLE_CLIENT_EMAIL as string;
+process.env.REACT_APP_GOOGLE_SERVICE_PRIVATE_KEY?.replace(/\n/g, "\n");
+const PRIVATE_KEY: string = process.env.REACT_APP_GOOGLE_SERVICE_PRIVATE_KEY as string;
 
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID);
 
-const appendSpreadsheet = async (row) => {
+const appendSpreadsheet = async (row: string[][]) => {
   try {
     await doc.useServiceAccountAuth({
       client_email: CLIENT_EMAIL,
@@ -33,7 +35,7 @@ const appendSpreadsheet = async (row) => {
 
     const sheet = doc.sheetsById[SHEET_ID];
     const result = await sheet.addRows(row);
-    console.log(row.type);
+    //console.log(row.type);
   } catch (e) {
     console.error("Error: ", e);
   }
@@ -47,11 +49,17 @@ async function scrapeTable(nflWebsite: Website) {
   });
   const page = await browser.newPage();
   await page.goto(nflWebsite.url, { waitUntil: "networkidle2" });
-  const position = await page.evaluate(() => {
-    const RB = document.querySelector("//*[text()=" + nflWebsite.position + "]")
-    return RB
+  for (var el of nflWebsite.positions!) {
+  let positionClick: string = await page.evaluate(() => {
+    console.log("Evaluating");
+    console.log(el);
+    document.querySelector("//*[text()=" + el + "]")
+    console.log(positionClick);
+    return positionClick;
   });
-  await page.click(nflWebsite.position);
+  await page.click(positionClick);
+}
+  
   const result = await page.evaluate(() => {
     
     const rows = document.querySelectorAll("table tr");
@@ -68,7 +76,7 @@ async function scrapeTable(nflWebsite: Website) {
 }
 
 async function addToGSheets (nflWebsite: Website) {
-  console.log(nflWebsite["url"]);
+  console.log(nflWebsite.url);
   results = await scrapeTable(nflWebsite);
   console.log(results);
   appendSpreadsheet(results);

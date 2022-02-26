@@ -2,10 +2,11 @@
   "compilerOptions": {
     "module": "commonjs",
     "esModuleInterop": true,
-    "target": "es6",
+    "target": "es2021",
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist"
   },
-  "lib": ["es2015"]
+  "lib": ["ES2021"],
+  "extends": "@tsconfig/recommended/tsconfig.json"
 }
