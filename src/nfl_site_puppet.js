@@ -6,7 +6,7 @@ import { GoogleSpreadsheet } from "google-spreadsheet";
 import puppeteer from 'puppeteer';
 const nflWebsite = "https://fantasy.nfl.com/research/pointsagainst"
 const fantPositions = ["QB", "RB", "WR", "TE", "K", "DST"]
-
+let results = [];
 // Config variables
 const SPREADSHEET_ID = process.env.REACT_APP_SPREADSHEET_ID;
 const SHEET_ID = process.env.REACT_APP_SHEET_ID;
@@ -41,15 +41,10 @@ async function scrapeTable(nflWebsite) {
   });
   const page = await browser.newPage();
   await page.goto(nflWebsite, { waitUntil: "networkidle2" });
-  for (const i in fantPositions) {
-    const positions = await page.evaluate(() => Array.from(document.querySelector("//*[text()=" + fantPositions[i] + "]"), e => e.innerText));
-    positions.forEach(positionClick => {
-    console.log(positionClick);
-    });
-  await page.click(positionClick);
-}
- 
-
+  const positions = await page.evaluate(() => Array.from(document.querySelector("//*[text()=" + fantPositions[i] + "]"), e => e.innerText));
+   for (const position of positions) {
+    await page.click(position)
+   }
 
   const result = await page.evaluate(() => {
     
