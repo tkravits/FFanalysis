@@ -43,15 +43,8 @@ async function scrapeTable(nflWebsite) {
   });
   const page = await browser.newPage();
   await page.goto(nflWebsite, { waitUntil: "networkidle2" });
-  //page = await openSite(nflWebsite);
-  //selector = "//*[text()='RB']";
-  // NEED TO CONVERT xPATH TO CSS SELECTOR
-  //const nodes = await page.$$(`//*[text()='RB']`); // selector children
-  const positionClick = await page.evaluate(() => Array.from(document.querySelector("//*[text()='RB']"), e => e.innerText));
-// function to click on position await page.click(position)
-  //positionClick = await selectPosition(fantPositions)
-  await page.click(positionClick);
-  //await page.click(nodes[0]);
+  const element = await page.$x('//*[text()="RB"]');
+  await element[0].click();
   const result = await page.evaluate(() => {
     
     const rows = document.querySelectorAll("table tr");
@@ -63,7 +56,7 @@ async function scrapeTable(nflWebsite) {
       );
     });
   });
-  await browser.close();
+  //await browser.close();
   return result;
 }
 
