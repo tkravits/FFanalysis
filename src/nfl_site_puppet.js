@@ -1,9 +1,10 @@
 'use strict';
+import { waitFor } from '@testing-library/react';
 //require('dotenv').config();
 // if you're going to run this, add "type": "module" to package.json
 import 'dotenv/config'
 import { GoogleSpreadsheet } from "google-spreadsheet";
-import { launchChrome } from "./browser.js";
+//import { launchChrome } from "./browser.js";
 import puppeteer from 'puppeteer';
 const nflWebsite = "https://fantasy.nfl.com/research/pointsagainst"
 const fantPositions = ["QB", "RB", "WR", "TE", "K", "DST"]
@@ -24,21 +25,13 @@ async function selectPosition(positions){
   }
 }
 
-const clickBtn = async (page) => {
-  try {
-    const btn = await page.waitForXpath('//*[text()="RB"]');
-    await btn.click(); // left clicks once
-  } catch(e) {
-    console.error("Unable to click button", e);
-  }
-};
+async function clickPosition(page, position){
+  const element = await page.$x('//*[text()="' + position + '"]');
+  await element[0].click();
+}
 
-
-async function scrapeTable(website) {
-  
-  clickBtn(page);
+async function scrapeTable(page) {
   const result = await page.evaluate(() => {
-    
     const rows = document.querySelectorAll("table tr");
     return Array.from(rows, (row) => {
       const columns = row.querySelectorAll("td");
@@ -48,7 +41,6 @@ async function scrapeTable(website) {
       );
     });
   });
-  await browser.close();
   return result;
 }
 
@@ -61,7 +53,7 @@ const appendSpreadsheet = async (row) => {
     });
     await doc.loadInfo(); // loads document properties and worksheets
 
-    const sheet = doc.sheetsById[sheetID];
+    const sheet = doc.sheetsById[0];
     const result = await sheet.addRows(row);
     
     console.log(typeof(row))
@@ -73,33 +65,27 @@ const appendSpreadsheet = async (row) => {
 
 
 async function addToGSheets (nflWebsite) {
-  console.log(nflWebsite);
-  // loop through each position and scrape the table
-  // for (const position of fantPositions) {
-    // scrape the table
-    const [newPage, exitChrome] = await launchChrome();
-    const [page] = await newPage();
+  results = await scrapeTable(nflWebsite);
+  console.log(results);
+  appendSpreadsheet(results);
+}
   
-    // exit the function if the tab is not properly opened
-    if (!page) return;
+// const NFLFantSneet = addToGSheets(nflWebsite);
+
+async function init(){
+  const browser = await puppeteer.launch({
+    headless: false,
+    defaultViewport: null,
+  });
+  const page = await browser.newPage();
+  await page.goto(nflWebsite);
+  await Promise.all([
+    page.waitForNavigation(),
+    clickPosition(page, "RB"),
+]);
   
-    // Flow 2 => Visiting a website's home page
-    const url = nflWebsite;
-    console.log("Opening " + url);
-    try {
-      await page.goto(url, {
-        waitUntil: "networkidle0", // wait till all network requests has been processed
-      });
-    } catch(e) {
-      console.error("Unable to visit " + url, e);
-      await exitChrome(); // close chrome on error
-      return; // exiting the function
-    }
-    results = await scrapeTable(nflWebsite);
-    console.log(results);
-    appendSpreadsheet(results);
-    await exitChrome(); // close chrome
-  };
-  
-export default scrapePersons;
-const NFLFantSneet = addToGSheets(nflWebsite);
+  appendSpreadsheet(results);
+  await browser.close();
+};
+
+init();
