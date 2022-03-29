@@ -3,20 +3,20 @@
 // if you're going to run this, add "type": "module" to package.json
 import 'dotenv/config'
 import { GoogleSpreadsheet } from "google-spreadsheet";
+import { launchChrome } from "./browser.js";
 import puppeteer from 'puppeteer';
 const nflWebsite = "https://fantasy.nfl.com/research/pointsagainst"
 const fantPositions = ["QB", "RB", "WR", "TE", "K", "DST"]
 let results = [];
+
 // Config variables
 const SPREADSHEET_ID = process.env.REACT_APP_SPREADSHEET_ID;
-const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+// const SHEET_ID = process.env.REACT_APP_SHEET_ID;
 const CLIENT_EMAIL = process.env.REACT_APP_GOOGLE_CLIENT_EMAIL;
 process.env.REACT_APP_GOOGLE_SERVICE_PRIVATE_KEY.replace(/\n/g, '\n')
 const PRIVATE_KEY = process.env.REACT_APP_GOOGLE_SERVICE_PRIVATE_KEY;
 
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID);
-
-
 
 async function selectPosition(positions){
   for (const position of positions) {
@@ -24,27 +24,19 @@ async function selectPosition(positions){
   }
 }
 
-async function openSite(website){
-const browser = await puppeteer.launch({
-  headless: false,
-  //slowMo: 10,
-  defaultViewport: null,
-});
-const page = await browser.newPage();
-await page.goto(website, { waitUntil: "networkidle2" });
-return page;
-}
+const clickBtn = async (page) => {
+  try {
+    const btn = await page.waitForXpath('//*[text()="RB"]');
+    await btn.click(); // left clicks once
+  } catch(e) {
+    console.error("Unable to click button", e);
+  }
+};
 
-async function scrapeTable(nflWebsite) {
-  const browser = await puppeteer.launch({
-    headless: false,
-    //slowMo: 10,
-    defaultViewport: null,
-  });
-  const page = await browser.newPage();
-  await page.goto(nflWebsite, { waitUntil: "networkidle2" });
-  const element = await page.$x('//*[text()="RB"]');
-  await element[0].click();
+
+async function scrapeTable(website) {
+  
+  clickBtn(page);
   const result = await page.evaluate(() => {
     
     const rows = document.querySelectorAll("table tr");
@@ -56,13 +48,12 @@ async function scrapeTable(nflWebsite) {
       );
     });
   });
-  //await browser.close();
+  await browser.close();
   return result;
 }
 
 
 const appendSpreadsheet = async (row) => {
- 
   try {
     await doc.useServiceAccountAuth({
       client_email: CLIENT_EMAIL,
@@ -70,8 +61,9 @@ const appendSpreadsheet = async (row) => {
     });
     await doc.loadInfo(); // loads document properties and worksheets
 
-    const sheet = doc.sheetsById[SHEET_ID];
+    const sheet = doc.sheetsById[sheetID];
     const result = await sheet.addRows(row);
+    
     console.log(typeof(row))
   } catch (e) {
     console.error('Error: ', e);
@@ -85,9 +77,29 @@ async function addToGSheets (nflWebsite) {
   // loop through each position and scrape the table
   // for (const position of fantPositions) {
     // scrape the table
-  results = await scrapeTable(nflWebsite);
-  console.log(results);
-  appendSpreadsheet(results);
-}
-const QBSheets = addToGSheets(nflWebsite);
-console.log(QBSheets);
+    const [newPage, exitChrome] = await launchChrome();
+    const [page] = await newPage();
+  
+    // exit the function if the tab is not properly opened
+    if (!page) return;
+  
+    // Flow 2 => Visiting a website's home page
+    const url = nflWebsite;
+    console.log("Opening " + url);
+    try {
+      await page.goto(url, {
+        waitUntil: "networkidle0", // wait till all network requests has been processed
+      });
+    } catch(e) {
+      console.error("Unable to visit " + url, e);
+      await exitChrome(); // close chrome on error
+      return; // exiting the function
+    }
+    results = await scrapeTable(nflWebsite);
+    console.log(results);
+    appendSpreadsheet(results);
+    await exitChrome(); // close chrome
+  };
+  
+export default scrapePersons;
+const NFLFantSneet = addToGSheets(nflWebsite);
